@@ -1,58 +1,72 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* Bauhaus Light palette */
-  --color-background: #fafafa;
-  --color-surface: #f0f0f0;
-  --color-surface-2: #e8e8e8;
-  --color-border: #d4d4d4;
-  --color-foreground: #111111;
-  --color-muted: #666666;
+  /* High-contrast minimalist gradient palette */
+  --color-background: #e9edf2;
+  --color-surface: #f2f4f7;
+  --color-surface-2: #e3e7ee;
+  --color-border: #b6bdcb;
+  --color-foreground: #0f1422;
+  --color-muted: #4c5568;
 
-  /* Bauhaus primary triad */
-  --color-bauhaus-red: #e63946;
-  --color-bauhaus-yellow: #f4a261;
-  --color-bauhaus-blue: #1d3557;
-  --color-bauhaus-blue-light: #457b9d;
+  --color-bauhaus-red: #ef4f91;
+  --color-bauhaus-yellow: #ffd86b;
+  --color-bauhaus-blue: #193d7a;
+  --color-bauhaus-blue-light: #4f6ff1;
 
-  /* Semantic aliases */
-  --color-insight-blue: #1d3557;
-  --color-insight-blue-light: #457b9d;
-  --color-insight-blue-glow: #457b9d;
+  --color-insight-blue: #193d7a;
+  --color-insight-blue-light: #4f6ff1;
+  --color-insight-blue-glow: #ef4f91;
   --color-success: #2d6a4f;
-  --color-warning: #f4a261;
-  --color-danger: #e63946;
+  --color-warning: #e5a93e;
+  --color-danger: #e14a68;
 
   --font-anta: var(--font-anta);
   --font-league: var(--font-league);
 }
 
 html {
-  background: #fafafa;
-  color: #111111;
+  background: #e9edf2;
+  color: #0f1422;
 }
 
 body {
-  background: #fafafa;
-  color: #111111;
+  background:
+    radial-gradient(90rem 55rem at 20% -10%, rgba(239, 79, 145, 0.38), transparent 60%),
+    radial-gradient(60rem 40rem at 35% 15%, rgba(25, 61, 122, 0.52), transparent 65%),
+    radial-gradient(72rem 48rem at 80% 32%, rgba(255, 216, 107, 0.22), transparent 62%),
+    #e9edf2;
+  color: #0f1422;
   font-family: var(--font-league), "League Spartan", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-track { background: #f0f0f0; }
-::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 2px; }
+::-webkit-scrollbar-track { background: #d9dfeb; }
+::-webkit-scrollbar-thumb { background: #8793a9; border-radius: 2px; }
 
 *:focus-visible {
-  outline: 2px solid #1d3557;
+  outline: 2px solid #193d7a;
   outline-offset: 2px;
 }
 
-/* Bauhaus card — sharp edges, solid border */
+/* Section wrapper: no card / no shadow */
 .glass {
-  background: #ffffff;
-  border: 1px solid #d4d4d4;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.section-cut {
+  border-top: 1px solid rgba(15, 20, 34, 0.14);
+  border-bottom: 1px solid rgba(15, 20, 34, 0.14);
+}
+
+/* De-emphasize card-like borders site-wide */
+.border,
+.border-2 {
+  border-width: 0 !important;
 }
 
 /* Bauhaus spring animation defaults */
@@ -87,20 +101,21 @@ body {
 
 /* Gradient text (kept for landing) */
 .gradient-text {
-  background: linear-gradient(135deg, #111111 0%, #457b9d 100%);
+  background: linear-gradient(122deg, #ffffff 5%, #f6f8ff 38%, #ffe3ef 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* Bauhaus geometric button */
+/* CTA: pure color, no shadow */
 .btn-bauhaus {
-  background: #1d3557;
+  background: #193d7a;
   color: #ffffff;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  border-radius: 2px;
-  transition: background 0.15s;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  transition: background 0.18s, transform 0.18s;
+  box-shadow: none;
 }
-.btn-bauhaus:hover { background: #457b9d; }
+.btn-bauhaus:hover { background: #2f57b5; }
 .btn-bauhaus:active { transform: scale(0.98); }

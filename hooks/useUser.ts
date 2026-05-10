@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase-browser";
+import { createOptionalClient } from "@/lib/supabase-browser";
 import type { User } from "@supabase/supabase-js";
 
 export interface Profile {
@@ -17,10 +17,17 @@ export function useUser() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const supabase = createClient();
+    const supabase = createOptionalClient();
+    if (!supabase) {
+      setLoading(false);
+      setUser(null);
+      setProfile(null);
+      return;
+    }
+    const client = supabase;
 
     async function fetchProfile(u: User) {
-      const { data } = await supabase
+      const { data } = await client
         .from("profiles")
         .select("*")
         .eq("id", u.id)
@@ -28,13 +35,13 @@ export function useUser() {
       setProfile(data ?? null);
     }
 
-    supabase.auth.getUser().then(({ data: { user: u } }) => {
+    client.auth.getUser().then(({ data: { user: u } }) => {
       setUser(u);
       if (u) fetchProfile(u);
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = client.auth.onAuthStateChange(
       (_event, session) => {
         const u = session?.user ?? null;
         setUser(u);

@@ -443,7 +443,7 @@ export default function ImmersiveShadowingPlayer({
             >
               <LiaisonText
                 text={seg.text}
-                className="text-white text-sm font-league leading-relaxed block text-center drop-shadow-lg"
+                className="text-white text-sm font-league leading-relaxed block text-center"
                 markerClassName="font-bold"
                 // white liaison markers on dark background
               />

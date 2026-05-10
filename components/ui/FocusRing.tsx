@@ -23,10 +23,10 @@ export default function FocusRing({
     score >= 90
       ? "#2d6a4f"
       : score >= 70
-        ? "#1d3557"
+        ? "#193d7a"
         : score >= 50
-          ? "#f4a261"
-          : "#e63946";
+          ? "#e5a93e"
+          : "#e14a68";
 
   return (
     <div
@@ -45,8 +45,8 @@ export default function FocusRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#d4d4d4"
-          strokeWidth="8"
+          stroke="rgba(15,20,34,0.16)"
+          strokeWidth="7"
         />
         {/* Progress */}
         <motion.circle
@@ -55,13 +55,12 @@ export default function FocusRing({
           r={radius}
           fill="none"
           stroke={strokeColor}
-          strokeWidth="8"
+          strokeWidth="7"
           strokeLinecap="round"
           strokeDasharray={circumference}
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset: offset }}
           transition={{ duration: 1.2, ease: "easeOut" }}
-          style={{ filter: `drop-shadow(0 0 6px ${strokeColor}66)` }}
         />
       </svg>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { fetchTtsAudio } from "@/lib/api";
 
 export interface AssessedPhoneme {
   phoneme: string;
@@ -25,15 +26,7 @@ const WARN = "#f4a261";
 const MUTED = "#666666";
 
 function playWord(word: string) {
-  fetch("/api/tts-proxy", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text: word, voice: "alloy" }),
-  })
-    .then((r) => {
-      if (!r.ok) throw new Error("TTS unavailable");
-      return r.blob();
-    })
+  fetchTtsAudio(word, "alloy")
     .then((blob) => {
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
@@ -54,8 +47,8 @@ function PhonemeChip({ ph }: { ph: AssessedPhoneme }) {
   return (
     <div className="flex flex-col items-center gap-0.5">
       <div
-        className="px-2 py-1 text-xs font-league font-bold text-white min-w-[2rem] text-center"
-        style={{ background: color }}
+        className="px-2 py-1 text-xs font-league font-bold min-w-[2rem] text-center border"
+        style={{ color, borderColor: `${color}66` }}
       >
         {ph.phoneme || "·"}
       </div>
@@ -83,7 +76,7 @@ function WordCard({ w, idx }: { w: WordResult; idx: number }) {
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: idx * 0.05, type: "spring", stiffness: 400, damping: 30 }}
-      className="flex flex-col gap-2 p-3 border border-border bg-white min-w-[6rem]"
+      className="flex flex-col gap-2 p-3 min-w-[6rem] border-b border-border/60"
     >
       {/* Word + score header */}
       <div className="flex items-center justify-between gap-2">
@@ -98,11 +91,10 @@ function WordCard({ w, idx }: { w: WordResult; idx: number }) {
           <button
             onClick={() => playWord(w.word)}
             title="Play reference pronunciation"
-            className="w-5 h-5 flex items-center justify-center hover:opacity-70 transition-opacity"
-            style={{ background: "#1d3557" }}
+            className="w-5 h-5 flex items-center justify-center hover:opacity-70 transition-opacity rounded-full border border-foreground/40"
           >
             <svg width="7" height="8" viewBox="0 0 7 8">
-              <polygon points="0,0 7,4 0,8" fill="white" />
+              <polygon points="0,0 7,4 0,8" fill="#193d7a" />
             </svg>
           </button>
           <span
@@ -117,8 +109,8 @@ function WordCard({ w, idx }: { w: WordResult; idx: number }) {
       {/* Error type badge */}
       {(isMispronounced || isOmission || isInsertion) && (
         <div
-          className="text-[10px] font-league px-1.5 py-0.5 text-white w-fit"
-          style={{ background: isMispronounced ? BAD : isOmission ? MUTED : WARN }}
+          className="text-[10px] font-league px-1.5 py-0.5 w-fit border"
+          style={{ color: isMispronounced ? BAD : isOmission ? MUTED : WARN, borderColor: "currentColor" }}
         >
           {isMispronounced ? "MISPRONOUNCED"
             : isOmission ? "OMITTED"
@@ -171,7 +163,7 @@ export default function PhonemeBreakdown({ words }: PhonemeBreakdownProps) {
   const badCount  = words.filter((w) => w.accuracy_score < 55).length;
 
   return (
-    <div className="flex flex-col gap-3 p-5 border border-border bg-surface">
+    <div className="flex flex-col gap-3 py-4 section-cut">
       {/* Legend */}
       <div className="flex items-center justify-between">
         <p className="text-xs font-league text-muted uppercase tracking-widest">

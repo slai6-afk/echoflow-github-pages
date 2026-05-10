@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase-browser";
+import { createOptionalClient } from "@/lib/supabase-browser";
 import { WordResult } from "@/components/training/PhonemeBreakdown";
 
 interface AssessmentPayload {
@@ -9,7 +9,8 @@ interface AssessmentPayload {
 }
 
 export async function saveAssessmentResult(payload: AssessmentPayload): Promise<void> {
-  const supabase = createClient();
+  const supabase = createOptionalClient();
+  if (!supabase) return;
 
   // Get current authenticated user
   const { data: { user } } = await supabase.auth.getUser();

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import ImmersiveShadowingPlayer, { Segment } from "@/components/training/ImmersiveShadowingPlayer";
+import { getYoutubeClips } from "@/lib/api";
 
 interface VideoClip {
   id: string;
@@ -71,8 +72,7 @@ export default function ShadowingPage() {
   const [lockedMap, setLockedMap] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/content/youtube-clips")
-      .then((r) => r.json())
+    getYoutubeClips()
       .then((data: VideoClip[]) => {
         const valid = data.filter((c) => (c.segments?.length ?? 0) > 0);
         setClips(valid.length > 0 ? valid : FALLBACK_CLIPS);

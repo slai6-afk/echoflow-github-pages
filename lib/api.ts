@@ -1,4 +1,5 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const API_BASE =
+  (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
 
 export async function evaluatePronunciation(
   audioBlob: Blob,
@@ -33,6 +34,22 @@ export async function getTechArticles() {
   const res = await fetch(`${API_BASE}/api/content/articles`);
   if (!res.ok) throw new Error("Content fetch failed");
   return res.json();
+}
+
+export async function getYoutubeClips() {
+  const res = await fetch(`${API_BASE}/api/content/youtube-clips`);
+  if (!res.ok) throw new Error("YouTube clips fetch failed");
+  return res.json();
+}
+
+export async function fetchTtsAudio(text: string, voice = "alloy"): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/api/content/tts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, voice }),
+  });
+  if (!res.ok) throw new Error("TTS unavailable");
+  return res.blob();
 }
 
 export async function analyzeImportedAudio(audioBlob: Blob, role = "UX Designer", nativeLanguage = "") {

@@ -24,28 +24,32 @@ export default function WaveformBackground() {
 
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      tick += 0.008;
+      tick += 0.006;
 
-      const barCount = 80;
+      const barCount = 72;
       const barWidth = canvas.width / barCount;
-      const centerY = canvas.height * 0.6;
+      const centerY = canvas.height * 0.54;
 
       for (let i = 0; i < barCount; i++) {
         const phase = (i / barCount) * Math.PI * 4 + tick;
         const height =
-          Math.sin(phase) * 30 +
-          Math.sin(phase * 2.3) * 15 +
-          Math.sin(phase * 0.7) * 20;
-        const alpha = 0.03 + Math.abs(Math.sin(phase * 0.5)) * 0.04;
+          Math.sin(phase) * 42 +
+          Math.sin(phase * 2.1) * 18 +
+          Math.sin(phase * 0.68) * 22;
+        const alpha = 0.06 + Math.abs(Math.sin(phase * 0.5)) * 0.06;
 
-        ctx.fillStyle = `rgba(27, 58, 140, ${alpha})`;
+        const mix = (Math.sin(phase * 0.6) + 1) / 2;
+        const r = Math.round(230 - mix * 60);
+        const g = Math.round(120 - mix * 40);
+        const b = Math.round(185 + mix * 45);
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
         ctx.beginPath();
         ctx.roundRect(
           i * barWidth + barWidth * 0.15,
           centerY - Math.abs(height),
           barWidth * 0.7,
           Math.abs(height) * 2,
-          2
+          3
         );
         ctx.fill();
       }
