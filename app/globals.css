@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* Bauhaus Light palette */
+  --color-background: #fafafa;
+  --color-surface: #f0f0f0;
+  --color-surface-2: #e8e8e8;
+  --color-border: #d4d4d4;
+  --color-foreground: #111111;
+  --color-muted: #666666;
+
+  /* Bauhaus primary triad */
+  --color-bauhaus-red: #e63946;
+  --color-bauhaus-yellow: #f4a261;
+  --color-bauhaus-blue: #1d3557;
+  --color-bauhaus-blue-light: #457b9d;
+
+  /* Semantic aliases */
+  --color-insight-blue: #1d3557;
+  --color-insight-blue-light: #457b9d;
+  --color-insight-blue-glow: #457b9d;
+  --color-success: #2d6a4f;
+  --color-warning: #f4a261;
+  --color-danger: #e63946;
+
+  --font-anta: var(--font-anta);
+  --font-league: var(--font-league);
+}
+
+html {
+  background: #fafafa;
+  color: #111111;
+}
+
+body {
+  background: #fafafa;
+  color: #111111;
+  font-family: var(--font-league), "League Spartan", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: #f0f0f0; }
+::-webkit-scrollbar-thumb { background: #d4d4d4; border-radius: 2px; }
+
+*:focus-visible {
+  outline: 2px solid #1d3557;
+  outline-offset: 2px;
+}
+
+/* Bauhaus card — sharp edges, solid border */
+.glass {
+  background: #ffffff;
+  border: 1px solid #d4d4d4;
+}
+
+/* Bauhaus spring animation defaults */
+@keyframes slide-in-left {
+  from { transform: translateX(-16px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+@keyframes slide-in-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes bauhaus-pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.08); }
+}
+
+.bauhaus-slide-left { animation: slide-in-left 0.22s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.bauhaus-slide-up   { animation: slide-in-up   0.22s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Recording pulse */
+@keyframes rec-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(230, 57, 70, 0.5); }
+  50%       { box-shadow: 0 0 0 12px rgba(230, 57, 70, 0); }
+}
+.rec-pulse { animation: rec-pulse 1.2s ease-in-out infinite; }
+
+/* Waveform bars */
+@keyframes wave-idle {
+  0%, 100% { transform: scaleY(0.25); }
+  50%       { transform: scaleY(1); }
+}
+
+/* Gradient text (kept for landing) */
+.gradient-text {
+  background: linear-gradient(135deg, #111111 0%, #457b9d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Bauhaus geometric button */
+.btn-bauhaus {
+  background: #1d3557;
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border-radius: 2px;
+  transition: background 0.15s;
+}
+.btn-bauhaus:hover { background: #457b9d; }
+.btn-bauhaus:active { transform: scale(0.98); }
