@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useDropzone } from "react-dropzone";
 import { analyzeImportedAudio } from "@/lib/api";
 import { useUser } from "@/hooks/useUser";
+import PillNav from "@/components/ui/PillNav";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -113,7 +114,7 @@ const PROGRESS_LABELS = [
 
 function ColoredTranscript({ text, wordScores }: { text: string; wordScores?: WordScore[] }) {
   if (!wordScores?.length) {
-    return <p className="font-league text-foreground text-sm leading-relaxed">{text}</p>;
+    return <p className="font-league text-[#111] text-sm leading-relaxed">{text}</p>;
   }
 
   const scoreMap: Record<string, number> = {};
@@ -129,7 +130,7 @@ function ColoredTranscript({ text, wordScores }: { text: string; wordScores?: Wo
         if (/^\s+$/.test(chunk)) return <span key={i}>{chunk}</span>;
         const key = chunk.toLowerCase().replace(/[^a-z]/g, "");
         const score = scoreMap[key];
-        if (score == null) return <span key={i} className="text-foreground">{chunk}</span>;
+        if (score == null) return <span key={i} className="text-[#111]">{chunk}</span>;
         return (
           <span
             key={i}
@@ -147,7 +148,7 @@ function ColoredTranscript({ text, wordScores }: { text: string; wordScores?: Wo
 
 function ScoreLegend() {
   return (
-    <div className="flex items-center gap-4 text-[10px] font-league uppercase tracking-widest text-muted">
+    <div className="flex items-center gap-4 text-[10px] font-league uppercase tracking-widest text-[#888]">
       {[["#2d6a4f", "Good (85+)"], ["#f4a261", "Watch (65–84)"], ["#e63946", "Practice (<65)"]].map(([color, label]) => (
         <div key={label} className="flex items-center gap-1.5">
           <div className="w-2.5 h-2.5 rounded-sm" style={{ background: color }} />
@@ -160,21 +161,21 @@ function ScoreLegend() {
 
 function PhraseCard({ item, type }: { item: UnnatualPhrase; type: "phrase" | "word" }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-4 flex flex-col gap-2">
+    <div className="rounded-xl border border-[#f0f0f0] bg-surface p-4 flex flex-col gap-2">
       <div className="flex items-start gap-2">
-        <span className="text-[10px] font-league uppercase tracking-widest text-bauhaus-red mt-0.5 flex-shrink-0">
+        <span className="text-[10px] font-league uppercase tracking-widest text-[#e84d78] mt-0.5 flex-shrink-0">
           {type === "phrase" ? "Unnatural" : "Word choice"}
         </span>
-        <span className="font-league text-sm text-foreground font-semibold">
+        <span className="font-league text-sm text-[#111] font-semibold">
           &ldquo;{item.original}&rdquo;
         </span>
       </div>
-      <p className="text-xs font-league text-muted leading-relaxed">{item.issue}</p>
-      <div className="flex items-start gap-2 pt-1 border-t border-border">
-        <span className="text-[10px] font-league text-bauhaus-blue uppercase tracking-widest flex-shrink-0 mt-0.5">
+      <p className="text-xs font-league text-[#888] leading-relaxed">{item.issue}</p>
+      <div className="flex items-start gap-2 pt-1 border-t border-[#f0f0f0]">
+        <span className="text-[10px] font-league text-[#1d3557] uppercase tracking-widest flex-shrink-0 mt-0.5">
           Try →
         </span>
-        <span className="font-league text-sm text-bauhaus-blue font-semibold">
+        <span className="font-league text-sm text-[#1d3557] font-semibold">
           &ldquo;{item.alternative}&rdquo;
         </span>
       </div>
@@ -184,6 +185,20 @@ function PhraseCard({ item, type }: { item: UnnatualPhrase; type: "phrase" | "wo
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+// Step thresholds (seconds): when to advance to each step index
+const STEP_AT = [0, 4, 20, 45, 58];
+// Rough total estimate for a 5-min clip (seconds)
+const ESTIMATED_TOTAL = 70;
+
+function fmtElapsed(s: number) {
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+function fmtRemaining(s: number) {
+  const r = Math.max(0, ESTIMATED_TOTAL - s);
+  if (r < 5) return "almost done";
+  return `~${r}s left`;
+}
+
 export default function ImportPage() {
   const { user } = useUser();
   const nativeLang = (user as { user_metadata?: { native_language?: string } })?.user_metadata?.native_language ?? "";
@@ -192,8 +207,10 @@ export default function ImportPage() {
   const [role, setRole] = useState("UX Designer");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [progressIdx, setProgressIdx] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("transcript");
+  const startTimeRef = useRef<number>(0);
 
   const onDrop = useCallback((accepted: File[]) => {
     if (accepted[0]) setFile(accepted[0]);
@@ -203,17 +220,26 @@ export default function ImportPage() {
     onDrop,
     accept: { "audio/*": [".m4a", ".wav", ".mp3", ".webm", ".ogg", ".mp4"] },
     maxFiles: 1,
-    maxSize: 100 * 1024 * 1024,
+    maxSize: 500 * 1024 * 1024,
   });
 
   const handleAnalyze = async () => {
     if (!file) return;
     setIsAnalyzing(true);
     setProgressIdx(0);
+    setElapsed(0);
+    startTimeRef.current = Date.now();
 
-    const interval = setInterval(() => {
-      setProgressIdx(p => Math.min(p + 1, PROGRESS_LABELS.length - 1));
-    }, 3500);
+    const timer = setInterval(() => {
+      const secs = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      setElapsed(secs);
+      // Advance step based on time elapsed
+      let step = 0;
+      for (let i = STEP_AT.length - 1; i >= 0; i--) {
+        if (secs >= STEP_AT[i]) { step = i; break; }
+      }
+      setProgressIdx(Math.min(step, PROGRESS_LABELS.length - 1));
+    }, 1000);
 
     try {
       const blob = new Blob([await file.arrayBuffer()], { type: file.type });
@@ -260,8 +286,7 @@ export default function ImportPage() {
       });
       setActiveTab("transcript");
     } finally {
-      clearInterval(interval);
-      setProgressIdx(PROGRESS_LABELS.length - 1);
+      clearInterval(timer);
       setIsAnalyzing(false);
     }
   };
@@ -281,36 +306,38 @@ export default function ImportPage() {
   const pron = result?.pronunciation;
 
   return (
-    <main className="min-h-screen bg-background flex flex-col">
-      <header className="flex items-center justify-between px-8 py-6 border-b border-border">
-        <Link href="/dashboard" className="font-anta text-xl text-foreground">
-          EchoFlow
-        </Link>
-        <span className="text-xs text-muted font-league uppercase tracking-widest">
-          Real World Import
-        </span>
-      </header>
+    <main className="min-h-screen bg-white text-[#111]">
+      <PillNav />
 
-      <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-12 flex flex-col gap-8">
+      <div className="max-w-2xl mx-auto w-full px-6 pt-28 pb-16 flex flex-col gap-8">
+        {/* Hero text */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <p className="text-xs text-muted uppercase tracking-widest font-league mb-2">The Real World</p>
-          <h2 className="font-anta text-5xl text-foreground mb-2">Import Audio</h2>
-          <p className="text-muted font-league text-sm leading-relaxed">
-            Upload a meeting recording or interview prep. Get a 4-dimension analysis: transcript,
-            content quality, tone, and pronunciation.
+          <p className="text-xs text-[#aaa] uppercase tracking-[0.25em] font-league mb-3">
+            A' Import
+          </p>
+          <h2 className="font-anta text-[52px] leading-[1.04] text-[#0a0a0a] mb-3">
+            Import Audio
+          </h2>
+          <p className="text-sm text-[#888] font-league leading-relaxed">
+            Upload a meeting recording or interview prep. Get a 4-dimension analysis:
+            transcript, content quality, tone, and pronunciation.
           </p>
         </motion.div>
 
+        {/* Privacy note */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="flex items-center gap-3 glass px-4 py-3"
+          className="flex items-center gap-2.5 px-4 py-2.5 rounded-full border border-[#f0f0f0] bg-[#fafafa] self-start"
         >
-          <span className="text-sm">🔒</span>
-          <p className="text-xs text-muted font-league">
-            Audio is processed ephemerally and never stored on our servers.
-          </p>
+          <svg className="w-3 h-3 text-[#aaa]" fill="none" viewBox="0 0 16 16" stroke="currentColor">
+            <rect x="3" y="7" width="10" height="8" rx="1.5" strokeWidth="1.3"/>
+            <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" strokeWidth="1.3" strokeLinecap="round"/>
+          </svg>
+          <span className="text-[11px] text-[#aaa] font-league">
+            Processed ephemerally · not stored · first 5 min analyzed
+          </span>
         </motion.div>
 
         <AnimatePresence mode="wait">
@@ -323,19 +350,19 @@ export default function ImportPage() {
               className="flex flex-col gap-5"
             >
               {/* Role selector */}
-              <div className="flex flex-col gap-2">
-                <p className="text-xs text-muted font-league uppercase tracking-widest">
-                  Your context (shapes vocabulary & tone analysis)
+              <div className="flex flex-col gap-2.5">
+                <p className="text-[10px] text-[#bbb] font-league uppercase tracking-[0.25em]">
+                  Your role — shapes vocabulary & tone analysis
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {ROLES.map(r => (
                     <button
                       key={r}
                       onClick={() => setRole(r)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-league transition-all border ${
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-league transition-all border ${
                         role === r
-                          ? "border-foreground text-foreground font-semibold"
-                          : "border-border text-muted hover:border-foreground hover:text-foreground"
+                          ? "border-[#111] bg-[#111] text-white"
+                          : "border-[#e4e4e7] text-[#666] hover:border-[#bbb] hover:text-[#111]"
                       }`}
                     >
                       {r}
@@ -347,58 +374,99 @@ export default function ImportPage() {
               {/* Dropzone */}
               <div
                 {...getRootProps()}
-                className={`glass p-12 flex flex-col items-center gap-4 cursor-pointer border-2 transition-all ${
-                  isDragActive ? "border-bauhaus-blue" : file ? "border-bauhaus-blue" : "border-border hover:border-muted"
+                className={`rounded-2xl p-12 flex flex-col items-center gap-4 cursor-pointer border-2 border-dashed transition-all ${
+                  isDragActive
+                    ? "border-[#111] bg-[#f8f8f8]"
+                    : file
+                    ? "border-[#111] bg-[#fafafa]"
+                    : "border-[#e4e4e7] hover:border-[#bbb] hover:bg-[#fafafa]"
                 }`}
               >
                 <input {...getInputProps()} />
-                <span className="text-4xl text-muted">
-                  {file ? "✓" : isDragActive ? "◎" : "⬆"}
-                </span>
+                {/* Icon */}
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${file ? "bg-[#111]" : "bg-[#f0f0f0]"}`}>
+                  {file ? (
+                    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 20 20" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : isDragActive ? (
+                    <svg className="w-5 h-5 text-[#888]" fill="none" viewBox="0 0 20 20" stroke="currentColor">
+                      <circle cx="10" cy="10" r="7" strokeWidth={1.5} />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-[#888]" fill="none" viewBox="0 0 20 20" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 14V6m-4 4 4-4 4 4" />
+                      <path strokeLinecap="round" strokeWidth={1.5} d="M3 15h14" />
+                    </svg>
+                  )}
+                </div>
                 {file ? (
                   <div className="text-center">
-                    <p className="font-league font-semibold text-foreground">{file.name}</p>
-                    <p className="text-xs text-muted mt-1">{formatBytes(file.size)}</p>
+                    <p className="font-league font-semibold text-[#111]">{file.name}</p>
+                    <p className="text-xs text-[#aaa] mt-1">{formatBytes(file.size)}</p>
                   </div>
                 ) : (
                   <div className="text-center">
-                    <p className="font-league text-foreground">
+                    <p className="font-league text-[#444] font-medium">
                       {isDragActive ? "Drop it here" : "Drag & drop your audio"}
                     </p>
-                    <p className="text-xs text-muted mt-1">.m4a, .wav, .mp3, .mp4 · up to 100 MB</p>
+                    <p className="text-xs text-[#bbb] mt-1">.m4a, .wav, .mp3, .mp4 · any size</p>
                   </div>
                 )}
               </div>
 
-              {/* Progress */}
+              {/* Progress — shown while analyzing */}
               {isAnalyzing && (
-                <div className="flex flex-col gap-2">
-                  <div className="h-0.5 bg-border rounded-full overflow-hidden">
+                <div className="flex flex-col gap-3 py-2">
+                  {/* Elapsed bar */}
+                  <div className="h-[2px] bg-[#f0f0f0] rounded-full overflow-hidden">
                     <motion.div
-                      className="h-full bg-foreground rounded-full"
-                      initial={{ width: "0%" }}
-                      animate={{ width: `${((progressIdx + 1) / PROGRESS_LABELS.length) * 100}%` }}
-                      transition={{ duration: 0.6 }}
+                      className="h-full bg-[#111] rounded-full"
+                      animate={{ width: `${Math.min((elapsed / ESTIMATED_TOTAL) * 100, 95)}%` }}
+                      transition={{ duration: 0.8, ease: "easeOut" }}
                     />
                   </div>
-                  <AnimatePresence mode="wait">
-                    <motion.p
-                      key={progressIdx}
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -4 }}
-                      className="text-xs text-muted font-league text-center"
-                    >
-                      {PROGRESS_LABELS[progressIdx]}
-                    </motion.p>
-                  </AnimatePresence>
+                  {/* Labels row */}
+                  <div className="flex items-center justify-between">
+                    <AnimatePresence mode="wait">
+                      <motion.p
+                        key={progressIdx}
+                        initial={{ opacity: 0, y: 3 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -3 }}
+                        className="text-xs text-[#888] font-league"
+                      >
+                        {PROGRESS_LABELS[progressIdx]}
+                      </motion.p>
+                    </AnimatePresence>
+                    <div className="flex items-center gap-3 text-[10px] font-league text-[#bbb]">
+                      <span>{fmtElapsed(elapsed)}</span>
+                      <span className="text-[#ddd]">·</span>
+                      <span>{fmtRemaining(elapsed)}</span>
+                    </div>
+                  </div>
+                  {/* Step indicators */}
+                  <div className="flex gap-1.5">
+                    {PROGRESS_LABELS.map((_, i) => (
+                      <div
+                        key={i}
+                        className={`h-0.5 flex-1 rounded-full transition-colors duration-500 ${
+                          i <= progressIdx ? "bg-[#111]" : "bg-[#f0f0f0]"
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
 
               <button
                 onClick={handleAnalyze}
                 disabled={!file || isAnalyzing}
-                className="w-full py-4 btn-bauhaus disabled:opacity-30"
+                className={`w-full py-4 rounded-xl text-sm font-league font-semibold tracking-wide transition-all ${
+                  !file || isAnalyzing
+                    ? "bg-[#f0f0f0] text-[#bbb] cursor-not-allowed"
+                    : "bg-[#111] text-white hover:bg-[#333]"
+                }`}
               >
                 {isAnalyzing ? "Analyzing…" : "Analyze Recording"}
               </button>
@@ -406,7 +474,7 @@ export default function ImportPage() {
               {file && !isAnalyzing && (
                 <button
                   onClick={() => setFile(null)}
-                  className="text-xs text-muted font-league text-center hover:text-foreground transition-colors"
+                  className="text-[11px] text-[#bbb] font-league text-center hover:text-[#888] transition-colors"
                 >
                   Remove file
                 </button>
@@ -420,15 +488,15 @@ export default function ImportPage() {
               className="flex flex-col gap-6"
             >
               {/* Tab bar */}
-              <div className="flex gap-1 bg-surface rounded-full p-1 border border-border">
+              <div className="flex gap-1 bg-[#f4f4f5] rounded-full p-1">
                 {TABS.map(t => (
                   <button
                     key={t.id}
                     onClick={() => setActiveTab(t.id)}
                     className={`flex-1 py-2 rounded-full text-xs font-league font-semibold uppercase tracking-wider transition-all ${
                       activeTab === t.id
-                        ? "bg-foreground text-background"
-                        : "text-muted hover:text-foreground"
+                        ? "bg-white text-[#111] shadow-[0_1px_4px_rgba(0,0,0,0.08)]"
+                        : "text-[#888] hover:text-[#444]"
                     }`}
                   >
                     {t.label}
@@ -450,7 +518,7 @@ export default function ImportPage() {
                     {pron?.word_scores?.length ? (
                       <ScoreLegend />
                     ) : null}
-                    <div className="glass p-5 rounded-xl border border-border">
+                    <div className="p-5 rounded-2xl border border-[#f0f0f0] bg-white">
                       <ColoredTranscript
                         text={result.transcript || "No transcript available."}
                         wordScores={pron?.word_scores}
@@ -462,14 +530,14 @@ export default function ImportPage() {
                         { label: "Fluency", value: pron?.fluency_score },
                         { label: "Content", value: content?.overall_content_score },
                       ].map((s) => (
-                        <div key={s.label} className="glass p-3 flex flex-col items-center gap-1">
+                        <div key={s.label} className="p-3 rounded-xl border border-[#f0f0f0] bg-white flex flex-col items-center gap-1">
                           <span
                             className="font-anta text-2xl"
                             style={{ color: s.value != null ? scoreColor(s.value) : "#9ca3af" }}
                           >
                             {s.value != null ? Math.round(s.value) : "—"}
                           </span>
-                          <span className="text-[10px] font-league uppercase tracking-widest text-muted">
+                          <span className="text-[10px] font-league uppercase tracking-widest text-[#888]">
                             {s.label}
                           </span>
                         </div>
@@ -490,7 +558,7 @@ export default function ImportPage() {
                     {/* Unnatural phrases */}
                     {(content.unnatural_phrases?.length ?? 0) > 0 && (
                       <div className="flex flex-col gap-3">
-                        <p className="text-[10px] font-league text-muted uppercase tracking-widest">
+                        <p className="text-[10px] font-league text-[#888] uppercase tracking-widest">
                           Unnatural Phrasing
                         </p>
                         {content.unnatural_phrases!.map((p, i) => (
@@ -502,7 +570,7 @@ export default function ImportPage() {
                     {/* Word choice issues */}
                     {(content.word_choice_issues?.length ?? 0) > 0 && (
                       <div className="flex flex-col gap-3">
-                        <p className="text-[10px] font-league text-muted uppercase tracking-widest">
+                        <p className="text-[10px] font-league text-[#888] uppercase tracking-widest">
                           Word Choice
                         </p>
                         {content.word_choice_issues!.map((p, i) => (
@@ -514,14 +582,14 @@ export default function ImportPage() {
                     {/* Filler words */}
                     {(content.filler_words?.length ?? 0) > 0 && (
                       <div className="flex flex-col gap-3">
-                        <p className="text-[10px] font-league text-muted uppercase tracking-widest">
+                        <p className="text-[10px] font-league text-[#888] uppercase tracking-widest">
                           Filler Words Detected
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {content.filler_words!.map((f, i) => (
                             <span
                               key={i}
-                              className="px-3 py-1.5 rounded-lg border border-bauhaus-red text-bauhaus-red text-xs font-league font-semibold"
+                              className="px-3 py-1.5 rounded-lg border border-[#e84d78] text-[#e84d78] text-xs font-league font-semibold"
                             >
                               {f}
                             </span>
@@ -533,12 +601,12 @@ export default function ImportPage() {
                     {/* Domain opportunities */}
                     {(content.domain_opportunities?.length ?? 0) > 0 && (
                       <div className="flex flex-col gap-2">
-                        <p className="text-[10px] font-league text-muted uppercase tracking-widest">
+                        <p className="text-[10px] font-league text-[#888] uppercase tracking-widest">
                           Domain Vocabulary Opportunities
                         </p>
                         {content.domain_opportunities!.map((d, i) => (
-                          <div key={i} className="glass p-3 rounded-xl border border-border">
-                            <p className="text-xs font-league text-muted leading-relaxed">{d}</p>
+                          <div key={i} className="p-3 rounded-xl border border-[#f0f0f0] bg-white">
+                            <p className="text-xs font-league text-[#888] leading-relaxed">{d}</p>
                           </div>
                         ))}
                       </div>
@@ -556,9 +624,9 @@ export default function ImportPage() {
                     className="flex flex-col gap-6"
                   >
                     {/* Tone label + badges */}
-                    <div className="glass p-5 rounded-xl border border-border flex flex-col gap-3">
-                      <p className="text-[10px] font-league text-muted uppercase tracking-widest">Overall Tone</p>
-                      <p className="font-anta text-2xl text-foreground">{tone.tone_label}</p>
+                    <div className="p-5 rounded-2xl border border-[#f0f0f0] bg-white flex flex-col gap-3">
+                      <p className="text-[10px] font-league text-[#888] uppercase tracking-widest">Overall Tone</p>
+                      <p className="font-anta text-2xl text-[#111]">{tone.tone_label}</p>
                       <div className="flex gap-3 flex-wrap">
                         {tone.energy_level && (
                           <div className="flex flex-col items-center gap-1">
@@ -568,7 +636,7 @@ export default function ImportPage() {
                             >
                               {tone.energy_level}
                             </span>
-                            <span className="text-[9px] font-league text-muted uppercase tracking-widest">Energy</span>
+                            <span className="text-[9px] font-league text-[#888] uppercase tracking-widest">Energy</span>
                           </div>
                         )}
                         {tone.storytelling_quality && (
@@ -579,7 +647,7 @@ export default function ImportPage() {
                             >
                               {tone.storytelling_quality}
                             </span>
-                            <span className="text-[9px] font-league text-muted uppercase tracking-widest">Storytelling</span>
+                            <span className="text-[9px] font-league text-[#888] uppercase tracking-widest">Storytelling</span>
                           </div>
                         )}
                       </div>
@@ -587,20 +655,20 @@ export default function ImportPage() {
 
                     {/* Key recommendation */}
                     {tone.key_recommendation && (
-                      <div className="glass p-5 rounded-xl border-l-4 border-bauhaus-blue">
-                        <p className="text-[10px] font-league text-bauhaus-blue uppercase tracking-widest mb-2">Key Recommendation</p>
-                        <p className="text-sm font-league text-foreground leading-relaxed">{tone.key_recommendation}</p>
+                      <div className="p-5 rounded-2xl border-l-4 border-[#1d3557] bg-[#f8faff]">
+                        <p className="text-[10px] font-league text-[#1d3557] uppercase tracking-widest mb-2">Key Recommendation</p>
+                        <p className="text-sm font-league text-[#111] leading-relaxed">{tone.key_recommendation}</p>
                       </div>
                     )}
 
                     {/* Verbal habits */}
                     {(tone.verbal_habits?.length ?? 0) > 0 && (
                       <div className="flex flex-col gap-2">
-                        <p className="text-[10px] font-league text-muted uppercase tracking-widest">Verbal Habits</p>
+                        <p className="text-[10px] font-league text-[#888] uppercase tracking-widest">Verbal Habits</p>
                         {tone.verbal_habits!.map((h, i) => (
                           <div key={i} className="flex items-start gap-2">
-                            <span className="text-bauhaus-red text-xs mt-0.5 flex-shrink-0">—</span>
-                            <p className="text-sm font-league text-foreground">{h}</p>
+                            <span className="text-[#e84d78] text-xs mt-0.5 flex-shrink-0">—</span>
+                            <p className="text-sm font-league text-[#111]">{h}</p>
                           </div>
                         ))}
                       </div>
@@ -609,10 +677,10 @@ export default function ImportPage() {
                     {/* Hedging patterns */}
                     {(tone.hedging_patterns?.length ?? 0) > 0 && (
                       <div className="flex flex-col gap-2">
-                        <p className="text-[10px] font-league text-muted uppercase tracking-widest">Hedging Patterns</p>
+                        <p className="text-[10px] font-league text-[#888] uppercase tracking-widest">Hedging Patterns</p>
                         <div className="flex flex-wrap gap-2">
                           {tone.hedging_patterns!.map((h, i) => (
-                            <span key={i} className="px-3 py-1.5 rounded-lg border border-border text-xs font-league text-muted italic">
+                            <span key={i} className="px-3 py-1.5 rounded-lg border border-[#f0f0f0] text-xs font-league text-[#888] italic">
                               {h}
                             </span>
                           ))}
@@ -623,11 +691,11 @@ export default function ImportPage() {
                     {/* Strengths */}
                     {(tone.strengths?.length ?? 0) > 0 && (
                       <div className="flex flex-col gap-2">
-                        <p className="text-[10px] font-league text-muted uppercase tracking-widest">Strengths</p>
+                        <p className="text-[10px] font-league text-[#888] uppercase tracking-widest">Strengths</p>
                         {tone.strengths!.map((s, i) => (
                           <div key={i} className="flex items-start gap-2">
                             <span className="text-xs mt-0.5 flex-shrink-0" style={{ color: "#2d6a4f" }}>✓</span>
-                            <p className="text-sm font-league text-foreground">{s}</p>
+                            <p className="text-sm font-league text-[#111]">{s}</p>
                           </div>
                         ))}
                       </div>
@@ -652,7 +720,7 @@ export default function ImportPage() {
                         { label: "Accuracy", value: pron?.accuracy_score },
                         { label: "Completeness", value: pron?.completeness_score },
                       ].map(s => (
-                        <div key={s.label} className="glass p-4 flex items-center gap-4">
+                        <div key={s.label} className="p-4 rounded-xl border border-[#f0f0f0] bg-white flex items-center gap-4">
                           <span
                             className="font-anta text-3xl"
                             style={{ color: s.value != null ? scoreColor(s.value) : "#9ca3af" }}
@@ -660,7 +728,7 @@ export default function ImportPage() {
                             {s.value != null ? Math.round(s.value) : "—"}
                           </span>
                           <div>
-                            <p className="text-xs font-league uppercase tracking-widest text-muted">{s.label}</p>
+                            <p className="text-xs font-league uppercase tracking-widest text-[#888]">{s.label}</p>
                           </div>
                         </div>
                       ))}
@@ -669,7 +737,7 @@ export default function ImportPage() {
                     {/* Phoneme concentration table */}
                     {(pron?.phoneme_concentration?.length ?? 0) > 0 ? (
                       <div className="flex flex-col gap-3">
-                        <p className="text-[10px] font-league text-muted uppercase tracking-widest">
+                        <p className="text-[10px] font-league text-[#888] uppercase tracking-widest">
                           Phoneme Focus Areas — worst first
                         </p>
                         <div className="flex flex-col gap-2">
@@ -679,7 +747,7 @@ export default function ImportPage() {
                               initial={{ opacity: 0, x: -8 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: i * 0.05 }}
-                              className="glass rounded-xl p-4 flex items-center gap-4"
+                              className="rounded-xl border border-[#f0f0f0] bg-white p-4 flex items-center gap-4"
                             >
                               <div className="flex flex-col items-center min-w-[3.5rem]">
                                 <span
@@ -703,12 +771,12 @@ export default function ImportPage() {
                                   />
                                 </div>
                                 {ph.example_words.length > 0 && (
-                                  <p className="text-[10px] font-league text-muted mt-1">
+                                  <p className="text-[10px] font-league text-[#888] mt-1">
                                     in: {ph.example_words.join(", ")}
                                   </p>
                                 )}
                               </div>
-                              <span className="text-[10px] font-league text-muted flex-shrink-0">
+                              <span className="text-[10px] font-league text-[#888] flex-shrink-0">
                                 {ph.count}×
                               </span>
                             </motion.div>
@@ -716,8 +784,8 @@ export default function ImportPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="glass p-5 rounded-xl border border-border text-center">
-                        <p className="text-sm font-league text-muted">
+                      <div className="p-5 rounded-2xl border border-[#f0f0f0] bg-[#fafafa] text-center">
+                        <p className="text-sm font-league text-[#888]">
                           Phoneme-level data requires Azure Speech configured on the server.
                         </p>
                       </div>
@@ -730,7 +798,7 @@ export default function ImportPage() {
               {/* Reset */}
               <button
                 onClick={() => { setResult(null); setFile(null); }}
-                className="w-full py-3.5 border border-border text-muted font-league text-sm font-semibold hover:border-foreground hover:text-foreground transition-all rounded-xl"
+                className="w-full py-3.5 rounded-xl border border-[#e4e4e7] text-[#888] font-league text-sm font-semibold hover:border-[#bbb] hover:text-[#444] transition-all"
               >
                 Analyze Another Recording
               </button>

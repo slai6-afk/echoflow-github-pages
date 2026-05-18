@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import FocusRing from "@/components/ui/FocusRing";
+import PillNav from "@/components/ui/PillNav";
 import { useUser } from "@/hooks/useUser";
 import { createClient } from "@/lib/supabase-browser";
 import {
@@ -13,32 +13,7 @@ import {
   type StoredPhonemeError,
 } from "@/lib/phonemeAnalysis";
 
-const modules = [
-  {
-    href: "/training/phoneme",
-    icon: "◈",
-    title: "Phoneme Lab",
-    subtitle: "Bottom 3 drills",
-    tag: "Priority",
-    tagColor: "text-bauhaus-red",
-  },
-  {
-    href: "/training/shadowing",
-    icon: "◉",
-    title: "Daily Shadowing",
-    subtitle: "YouTube · choose a speaker",
-    tag: "New",
-    tagColor: "text-bauhaus-blue-light",
-  },
-  {
-    href: "/training/import",
-    icon: "◎",
-    title: "Real World",
-    subtitle: "Upload a meeting recording",
-    tag: "",
-    tagColor: "",
-  },
-];
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface DashboardStats {
   sessions: number;
@@ -52,18 +27,85 @@ function calcStreak(dates: string[]): number {
   const days = [...new Set(dates.map((d) => d.slice(0, 10)))].sort().reverse();
   let streak = 1;
   for (let i = 1; i < days.length; i++) {
-    const prev = new Date(days[i - 1]);
-    const curr = new Date(days[i]);
-    const diff = (prev.getTime() - curr.getTime()) / 86400000;
+    const diff =
+      (new Date(days[i - 1]).getTime() - new Date(days[i]).getTime()) / 86400000;
     if (diff === 1) streak++;
     else break;
   }
-  // streak only counts if most recent day is today or yesterday
   const today = new Date().toISOString().slice(0, 10);
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
   if (days[0] !== today && days[0] !== yesterday) return 0;
   return streak;
 }
+
+// ─── Visual: score arc ────────────────────────────────────────────────────────
+
+function ScoreArc({ score }: { score: number }) {
+  const r = 88;
+  const circ = 2 * Math.PI * r;
+  const dash = (score / 100) * circ * 0.75; // 270° arc
+  const color = score >= 85 ? "#2d6a4f" : score >= 65 ? "#c9853e" : "#c0392b";
+
+  return (
+    <svg width="220" height="220" viewBox="0 0 220 220" className="rotate-[135deg]">
+      <circle cx="110" cy="110" r={r} fill="none" stroke="#f0f0f0" strokeWidth="8" />
+      <circle
+        cx="110" cy="110" r={r} fill="none"
+        stroke={color} strokeWidth="8"
+        strokeLinecap="round"
+        strokeDasharray={`${dash} ${circ}`}
+        style={{ transition: "stroke-dasharray 1s ease" }}
+      />
+    </svg>
+  );
+}
+
+function HeroPattern() {
+  const BARS = [18, 32, 52, 70, 85, 94, 79, 88, 74, 60, 92, 77, 63, 86, 71, 57, 82, 66, 44, 28];
+  return (
+    <div className="relative flex items-end gap-[6px] h-40">
+      {BARS.map((h, i) => (
+        <div
+          key={i}
+          className="rounded-full"
+          style={{
+            width: 7,
+            height: `${h}%`,
+            background: `rgba(10,10,10,${0.04 + (h / 100) * 0.12})`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── Module cards ─────────────────────────────────────────────────────────────
+
+const MODULES = [
+  {
+    href: "/training/phoneme",
+    tag: "A' Lab",
+    title: "Phoneme Lab",
+    desc: "Targeted drills for your weakest sounds",
+    accent: "#1d3557",
+  },
+  {
+    href: "/training/shadowing",
+    tag: "B' Shadow",
+    title: "Daily Shadowing",
+    desc: "Mirror native speakers, sentence by sentence",
+    accent: "#2d6a4f",
+  },
+  {
+    href: "/training/import",
+    tag: "A' Import",
+    title: "Real World",
+    desc: "Upload a meeting recording for full analysis",
+    accent: "#7b4f9e",
+  },
+];
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const { user, loading: userLoading } = useUser();
@@ -108,7 +150,6 @@ export default function DashboardPage() {
       setStats({ sessions, streak, phonemesFixed: phonemeRows.length, avgScore });
       setStatsLoading(false);
 
-      // Only generate insights if user has meaningful error data
       if (phonemeRows.length >= 3) {
         setInsightsLoading(true);
         try {
@@ -129,209 +170,172 @@ export default function DashboardPage() {
     fetchStats();
   }, [user, userLoading]);
 
-  const statRows = stats
-    ? [
-        { label: "Sessions", value: stats.sessions.toString() },
-        { label: "Streak", value: stats.streak ? `${stats.streak}d` : "—" },
-        { label: "Phonemes Tracked", value: stats.phonemesFixed.toString() },
-        { label: "Avg. Score", value: stats.avgScore !== null ? stats.avgScore.toString() : "—" },
-      ]
-    : Array(4).fill({ label: "…", value: "…" });
-
-  const overallScore = stats?.avgScore ?? 0;
-  const isNewUser = stats?.sessions === 0;
+  const isNewUser = !statsLoading && stats?.sessions === 0;
+  const score = stats?.avgScore ?? 0;
 
   return (
-    <main className="min-h-screen bg-background flex flex-col">
-      <header className="flex items-center justify-between px-8 py-6 border-b border-border">
-        <Link href="/" className="font-anta text-xl text-foreground">
-          EchoFlow
-        </Link>
-        <nav className="flex items-center gap-6">
-          {["phoneme", "shadowing", "import"].map((slug, i) => (
-            <Link
-              key={slug}
-              href={`/training/${slug}`}
-              className="text-xs text-muted hover:text-foreground font-league uppercase tracking-widest transition-colors"
-            >
-              {["Lab", "Shadow", "Import"][i]}
-            </Link>
-          ))}
-        </nav>
-      </header>
+    <main className="min-h-screen bg-white text-[#111]">
+      <PillNav />
 
-      <div className="flex-1 max-w-3xl mx-auto w-full px-6 py-12 flex flex-col gap-12">
-        {/* Greeting */}
+      {/* Hero section */}
+      <section className="pt-28 pb-12 px-10 max-w-6xl mx-auto flex items-start justify-between gap-12">
+        {/* Left: brand + headline */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center justify-between"
+          className="flex flex-col gap-6 flex-1"
         >
-          <div>
-            <p className="text-xs text-muted uppercase tracking-widest font-league mb-1">
-              {isNewUser && !statsLoading ? "Welcome" : "Good morning"}
-            </p>
-            <h1 className="font-anta text-5xl text-foreground">
-              {isNewUser && !statsLoading ? "Let's Begin" : "Your Flow"}
-            </h1>
+          <p className="text-xs text-[#aaa] uppercase tracking-[0.25em] font-league">echoflow</p>
+          <h1 className="font-anta text-[64px] leading-[1.02] text-[#0a0a0a]">
+            {isNewUser ? "Let's Begin." : "Your Flow."}
+          </h1>
+
+          {/* Stats chips */}
+          {!statsLoading && stats && (
+            <div className="flex items-center gap-3 flex-wrap">
+              {[
+                { label: "Sessions", value: stats.sessions },
+                { label: "Streak", value: stats.streak ? `${stats.streak}d` : "—" },
+                { label: "Avg Score", value: stats.avgScore ?? "—" },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  className="flex items-baseline gap-1.5 px-4 py-2 rounded-full border border-[#e8e8e8] bg-[#fafafa]"
+                >
+                  <span className="font-anta text-lg text-[#111]">{s.value}</span>
+                  <span className="text-[10px] font-league text-[#aaa] uppercase tracking-widest">{s.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Module explore tags */}
+          <div className="flex items-center gap-2 flex-wrap mt-2">
+            <span className="text-xs text-[#aaa] font-league mr-1">Explore</span>
+            {MODULES.map((m) => (
+              <Link
+                key={m.href}
+                href={m.href}
+                className="px-3.5 py-1.5 rounded-full border border-[#ddd] text-xs font-league text-[#444] hover:border-[#bbb] hover:text-[#111] transition-all"
+              >
+                {m.tag}
+              </Link>
+            ))}
           </div>
-          {!isNewUser && (
-            <FocusRing score={overallScore} size={110} label="Overall" />
+        </motion.div>
+
+        {/* Right: score arc + waveform */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="flex-shrink-0 flex flex-col items-center gap-4"
+        >
+          {score > 0 ? (
+            <div className="relative flex items-center justify-center">
+              <ScoreArc score={score} />
+              <div className="absolute flex flex-col items-center">
+                <span className="font-anta text-4xl text-[#111]">{score}</span>
+                <span className="text-[10px] font-league text-[#aaa] uppercase tracking-widest">Overall</span>
+              </div>
+            </div>
+          ) : (
+            <div className="opacity-60">
+              <HeroPattern />
+            </div>
           )}
         </motion.div>
+      </section>
 
-        {/* Stats row */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-4 gap-4"
-        >
-          {statRows.map((s, i) => (
-            <div key={i} className="glass p-4 flex flex-col items-center gap-1">
-              <span className={`font-anta text-2xl text-foreground ${statsLoading ? "opacity-30" : ""}`}>
-                {statsLoading ? "·" : s.value}
-              </span>
-              <span className="text-xs text-muted font-league uppercase tracking-wider">
-                {s.label}
-              </span>
-            </div>
-          ))}
-        </motion.div>
+      {/* Divider */}
+      <div className="h-px bg-[#f0f0f0] mx-10" />
 
-        {/* New user prompt */}
-        {isNewUser && !statsLoading && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="glass p-5 border-l-4 border-bauhaus-yellow"
-          >
-            <p className="text-xs font-league text-muted uppercase tracking-widest mb-1">
-              Get started
-            </p>
-            <p className="text-sm font-league text-foreground leading-relaxed">
-              No sessions yet. Start with the Phoneme Lab or pick a shadowing video — your scores will appear here after your first session.
-            </p>
-          </motion.div>
-        )}
-
-        {/* Modules */}
-        <div className="flex flex-col gap-4">
-          <p className="text-xs text-muted uppercase tracking-widest font-league">
-            Today&apos;s Focus
-          </p>
-          {modules.map((m, i) => (
+      {/* Modules grid */}
+      <section className="px-10 py-12 max-w-6xl mx-auto">
+        <p className="text-[10px] text-[#bbb] uppercase tracking-[0.3em] font-league mb-6">
+          Training Modules
+        </p>
+        <div className="grid grid-cols-3 gap-4">
+          {MODULES.map((m, i) => (
             <motion.div
               key={m.href}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 + i * 0.1 }}
+              transition={{ delay: 0.1 + i * 0.08 }}
             >
               <Link
                 href={m.href}
-                className="glass p-6 flex items-center gap-6 hover:border-bauhaus-blue border-2 border-border transition-all group block"
+                className="group block p-6 rounded-2xl border border-[#f0f0f0] hover:border-[#ddd] hover:shadow-[0_4px_24px_rgba(0,0,0,0.06)] transition-all bg-white"
               >
-                <span className="text-3xl text-bauhaus-blue-light">{m.icon}</span>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-league font-semibold text-foreground">
-                      {m.title}
-                    </span>
-                    {m.tag && (
-                      <span className={`text-xs font-league uppercase tracking-wider ${m.tagColor}`}>
-                        · {m.tag}
-                      </span>
-                    )}
-                  </div>
-                  <span className="text-sm text-muted font-league">{m.subtitle}</span>
-                </div>
-                <svg
-                  className="w-5 h-5 text-muted group-hover:text-foreground transition-colors"
-                  fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                {/* Tag */}
+                <span
+                  className="inline-block text-[10px] font-league uppercase tracking-widest px-2 py-0.5 rounded mb-4"
+                  style={{ background: `${m.accent}12`, color: m.accent }}
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
-                </svg>
+                  {m.tag}
+                </span>
+                <p className="font-anta text-xl text-[#111] mb-1">{m.title}</p>
+                <p className="text-xs text-[#888] font-league leading-relaxed">{m.desc}</p>
+                <div className="mt-5 flex items-center gap-1 text-xs font-league text-[#bbb] group-hover:text-[#666] transition-colors">
+                  Open
+                  <svg className="w-3 h-3 translate-y-px" fill="none" viewBox="0 0 12 12" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.5 6h7m-3-3 3 3-3 3" />
+                  </svg>
+                </div>
               </Link>
             </motion.div>
           ))}
         </div>
+      </section>
 
-        {/* Priority Focus Areas — real phoneme insights */}
-        {!isNewUser && !statsLoading && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="flex flex-col gap-4"
-          >
-            <p className="text-xs text-muted uppercase tracking-widest font-league">
-              Priority Focus Areas
-            </p>
+      {/* Priority Focus Areas */}
+      {!isNewUser && !statsLoading && (
+        <section className="px-10 pb-16 max-w-6xl mx-auto">
+          <div className="h-px bg-[#f0f0f0] mb-12" />
+          <p className="text-[10px] text-[#bbb] uppercase tracking-[0.3em] font-league mb-6">
+            Priority Focus Areas
+          </p>
 
-            {insightsLoading && (
-              <div className="flex flex-col gap-3">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="glass p-4 flex items-start gap-4 animate-pulse">
-                    <div className="w-12 h-8 bg-border" />
-                    <div className="flex-1 flex flex-col gap-2">
-                      <div className="h-3 bg-border w-1/3" />
-                      <div className="h-3 bg-border w-full" />
-                      <div className="h-3 bg-border w-3/4" />
-                    </div>
+          {insightsLoading && (
+            <div className="grid grid-cols-3 gap-4">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-32 rounded-2xl border border-[#f0f0f0] animate-pulse bg-[#fafafa]" />
+              ))}
+            </div>
+          )}
+
+          {!insightsLoading && focusCards.length > 0 && (
+            <div className="grid grid-cols-3 gap-4">
+              {focusCards.map((card, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + i * 0.08 }}
+                  className="p-5 rounded-2xl border border-[#f0f0f0] bg-white"
+                >
+                  <div className="flex items-baseline gap-2 mb-3">
+                    <span className="font-anta text-2xl text-[#111]">{card.phonemeSymbol}</span>
+                    <span className="text-xs font-league text-[#bbb]">{card.avgScore}/100</span>
                   </div>
-                ))}
-              </div>
-            )}
+                  <p className="text-[10px] font-league uppercase tracking-widest text-[#bbb] mb-2">
+                    {card.phoneticCategory}
+                  </p>
+                  <p className="text-xs font-league text-[#666] leading-relaxed line-clamp-3">
+                    {card.linguisticCause}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          )}
 
-            {!insightsLoading && focusCards.length > 0 && (
-              <div className="flex flex-col gap-3">
-                {focusCards.map((card, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.65 + i * 0.1 }}
-                    className="glass p-4 flex items-start gap-4"
-                  >
-                    <div className="flex flex-col items-center min-w-[3rem]">
-                      <span className="font-anta text-2xl text-bauhaus-blue-light leading-none">
-                        {card.phonemeSymbol}
-                      </span>
-                      <span className="text-xs text-muted font-league mt-1">
-                        {card.avgScore}
-                      </span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-league uppercase tracking-widest text-bauhaus-yellow">
-                          {card.phoneticCategory}
-                        </span>
-                        {card.substitution && (
-                          <span className="text-xs font-league text-bauhaus-red">
-                            {card.substitution}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm font-league text-muted leading-relaxed">
-                        {card.linguisticCause}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-
-            {!insightsLoading && focusCards.length === 0 && stats && stats.phonemesFixed < 3 && (
-              <div className="glass p-4 border-l-4 border-bauhaus-yellow">
-                <p className="text-sm font-league text-muted leading-relaxed">
-                  Complete a few more sessions to unlock your personalized phoneme analysis.
-                </p>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </div>
+          {!insightsLoading && focusCards.length === 0 && stats && stats.phonemesFixed < 3 && (
+            <p className="text-sm font-league text-[#aaa]">
+              Complete a few more sessions to unlock your personalized phoneme analysis.
+            </p>
+          )}
+        </section>
+      )}
     </main>
   );
 }

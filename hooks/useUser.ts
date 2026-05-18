@@ -17,17 +17,18 @@ export function useUser() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const supabase = createOptionalClient();
-    if (!supabase) {
+    const client = createOptionalClient();
+    if (!client) {
       setLoading(false);
       setUser(null);
       setProfile(null);
       return;
     }
-    const client = supabase;
+
+    const supabase = client;
 
     async function fetchProfile(u: User) {
-      const { data } = await client
+      const { data } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", u.id)
@@ -35,13 +36,13 @@ export function useUser() {
       setProfile(data ?? null);
     }
 
-    client.auth.getUser().then(({ data: { user: u } }) => {
+    supabase.auth.getUser().then(({ data: { user: u } }) => {
       setUser(u);
       if (u) fetchProfile(u);
       setLoading(false);
     });
 
-    const { data: { subscription } } = client.auth.onAuthStateChange(
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         const u = session?.user ?? null;
         setUser(u);

@@ -35,7 +35,7 @@ export default function RecordButton({
     >
       {/* Outer ring */}
       <div
-        className="absolute inset-0 rounded-full border border-foreground/35"
+        className="absolute inset-0 rounded-full border-2 border-foreground opacity-20"
         style={{ width: outer, height: outer }}
       />
 
@@ -44,7 +44,7 @@ export default function RecordButton({
         {isRecording && (
           <>
             <motion.div
-              className="absolute rounded-full border border-danger/70"
+              className="absolute rounded-full border border-danger"
               style={{ width: outer, height: outer }}
               initial={{ scale: 1, opacity: 0.6 }}
               animate={{ scale: 1.5, opacity: 0 }}
@@ -52,7 +52,7 @@ export default function RecordButton({
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }}
             />
             <motion.div
-              className="absolute rounded-full border border-danger/50"
+              className="absolute rounded-full border border-danger"
               style={{ width: outer, height: outer }}
               initial={{ scale: 1, opacity: 0.4 }}
               animate={{ scale: 2, opacity: 0 }}
@@ -74,11 +74,11 @@ export default function RecordButton({
         style={{
           width: inner,
           height: inner,
-          backgroundColor: isRecording ? "#e14a68" : "#193d7a",
+          backgroundColor: isRecording ? "#be123c" : "#050505",
         }}
         animate={{
           scale: isRecording ? [1, 1.05, 1] : 1,
-          backgroundColor: isRecording ? "#e14a68" : "#193d7a",
+          backgroundColor: isRecording ? "#be123c" : "#050505",
         }}
         transition={{
           scale: {

@@ -1,24 +1,26 @@
 import type { Metadata } from "next";
-import { Anta, League_Spartan } from "next/font/google";
+import { Manrope, Playfair_Display } from "next/font/google";
 import "./globals.css";
+import DemoGuard from "@/components/DemoGuard";
 
-const anta = Anta({
-  weight: "400",
+const titleFont = Playfair_Display({
+  weight: ["500", "600", "700"],
   subsets: ["latin"],
   variable: "--font-anta",
   display: "swap",
 });
 
-const leagueSpartan = League_Spartan({
+const bodyFont = Manrope({
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
   variable: "--font-league",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "EchoFlow AI — Speak with Precision",
+  title: "The Ethereal Echo — Voice Studio",
   description:
-    "A premium AI pronunciation coach that gives you the linguistic insight of a world-class expert.",
+    "A premium editorial pronunciation studio with minimalist navigation and refined AI-guided practice.",
 };
 
 export default function RootLayout({
@@ -27,9 +29,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${anta.variable} ${leagueSpartan.variable} h-full`}
+      className={`${titleFont.variable} ${bodyFont.variable} h-full`}
     >
-      <body className="min-h-full flex flex-col antialiased">{children}</body>
+      <body className="min-h-full flex flex-col antialiased bg-white">
+        <DemoGuard>{children}</DemoGuard>
+      </body>
     </html>
   );
 }

@@ -1,111 +1,145 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
-import WaveformBackground from "@/components/ui/WaveformBackground";
+
+const EXPLORE = [
+  { href: "/training/phoneme", label: "A' Lab", sub: "Phoneme" },
+  { href: "/training/shadowing", label: "B' Shadow", sub: "Shadowing" },
+  { href: "/training/import", label: "A' Import", sub: "Real World" },
+];
+
+function HeroWave() {
+  const BARS = [22, 38, 54, 74, 88, 96, 82, 91, 76, 62, 94, 80, 67, 89, 73, 59, 85, 70, 48, 34];
+  return (
+    <div className="relative w-[420px] h-[520px] flex items-center justify-center">
+      {/* Radial vignette to mimic the fading silhouette look */}
+      <div
+        className="pointer-events-none absolute inset-0 z-10"
+        style={{ background: "radial-gradient(ellipse 65% 75% at 50% 50%, transparent 30%, white 80%)" }}
+      />
+      {/* Concentric guide rings */}
+      {[0.92, 0.72, 0.52].map((s, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full border border-[#111]/[0.04]"
+          style={{ inset: `${(1 - s) * 50}%` }}
+        />
+      ))}
+      {/* Waveform bars */}
+      <div className="flex items-end gap-[5px]">
+        {BARS.map((h, i) => (
+          <div
+            key={i}
+            className="rounded-full"
+            style={{
+              width: 8,
+              height: h * 3.8,
+              background: `rgba(10,10,10,${0.09 + (h / 100) * 0.18})`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function LandingPage() {
-  const router = useRouter();
-
   return (
-    <main className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-background px-6">
-      <WaveformBackground />
-
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(255,255,255,0.35),transparent_40%)]" />
-
-      <div className="relative z-10 flex flex-col items-center text-center max-w-4xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="mb-8 flex items-center gap-3"
-        >
-          <div className="h-px w-12 bg-foreground/30" />
-          <span className="text-xs tracking-[0.3em] uppercase text-foreground/70 font-league">
-            AI Pronunciation Coach
-          </span>
-          <div className="h-px w-12 bg-foreground/30" />
-        </motion.div>
-
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.1 }}
-          className="font-anta text-7xl md:text-8xl lg:text-9xl leading-none tracking-tight gradient-text mb-6"
-        >
-          EchoFlow
-        </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.3 }}
-          className="text-xl md:text-2xl text-foreground/88 font-league font-light mb-14 max-w-2xl leading-relaxed"
-        >
-          Personal brand level speaking flow. Make English practice feel playful,
-          sharp, and effortless without losing focus.
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="flex flex-col items-center gap-4"
-        >
-          <button
-            onClick={() => router.push("/onboarding")}
-            className="group relative px-12 py-4 btn-bauhaus text-lg tracking-wide"
+    <main className="min-h-screen bg-white text-[#111] overflow-hidden">
+      {/* Pill Nav */}
+      <nav
+        className="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-0.5 bg-white/95 backdrop-blur-md rounded-full border border-[#e4e4e7] px-1.5 py-1.5"
+        style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.07)" }}
+      >
+        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#111] mr-1">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="3" fill="white" />
+            <circle cx="8" cy="8" r="6.5" stroke="white" strokeWidth="1" fill="none" />
+            <line x1="8" y1="1" x2="8" y2="3.5" stroke="white" strokeWidth="1" />
+            <line x1="8" y1="12.5" x2="8" y2="15" stroke="white" strokeWidth="1" />
+            <line x1="1" y1="8" x2="3.5" y2="8" stroke="white" strokeWidth="1" />
+            <line x1="12.5" y1="8" x2="15" y2="8" stroke="white" strokeWidth="1" />
+          </svg>
+        </div>
+        {[
+          { href: "/training/phoneme", label: "Lab" },
+          { href: "/training/shadowing", label: "Shadow" },
+          { href: "/training/import", label: "Import" },
+        ].map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="px-4 py-1.5 rounded-full text-sm font-league text-[#555] hover:text-[#111] hover:bg-[#f4f4f5] transition-all"
           >
-            Begin Your Assessment
-          </button>
-          <p className="text-xs text-foreground/65 tracking-wider uppercase">
-            Takes 5 minutes · No account required
+            {item.label}
+          </Link>
+        ))}
+        <div className="w-px h-4 bg-[#e4e4e7] mx-1" />
+        <Link href="/onboarding" className="px-4 py-1.5 rounded-full text-sm font-league bg-[#111] text-white hover:bg-[#333] transition-all">
+          Try Demo
+        </Link>
+      </nav>
+
+      {/* Hero */}
+      <div className="min-h-screen flex items-center justify-between px-16 max-w-7xl mx-auto">
+        {/* Left: text */}
+        <motion.div
+          initial={{ opacity: 0, y: 28 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7 }}
+          className="flex flex-col gap-7 max-w-md"
+        >
+          <p className="text-xs text-[#aaa] uppercase tracking-[0.25em] font-league">
+            echoflow
           </p>
+
+          <h1 className="font-anta text-[68px] leading-[1.02] tracking-[-0.01em] text-[#0a0a0a]">
+            Enhancement<br />of human<br />expression.
+          </h1>
+
+          <p className="text-sm text-[#666] font-league leading-relaxed max-w-xs">
+            AI pronunciation coaching built for tech professionals speaking English
+            at the highest level.
+          </p>
+
+          {/* Explore tags — augen style */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-[#aaa] font-league mr-1">Explore</span>
+            {EXPLORE.map((e) => (
+              <Link
+                key={e.href}
+                href={e.href}
+                className="px-3.5 py-1.5 rounded-full border border-[#ddd] text-xs font-league text-[#444] hover:border-[#bbb] hover:text-[#111] transition-all"
+              >
+                {e.label}
+              </Link>
+            ))}
+          </div>
+
+          <Link
+            href="/onboarding"
+            className="self-start mt-2 px-6 py-3 rounded-full bg-[#111] text-white text-sm font-league tracking-wide hover:bg-[#333] transition-colors"
+          >
+            Try it now →
+          </Link>
         </motion.div>
 
+        {/* Right: visual */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.8 }}
-          className="mt-20 grid grid-cols-3 gap-8 w-full max-w-2xl"
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1, delay: 0.15 }}
         >
-          {[
-            { label: "Phoneme\nAnalysis", icon: "circle" },
-            { label: "L1\nInterference", icon: "hex" },
-            { label: "Daily\nShadowing", icon: "mesh" },
-          ].map((f) => (
-            <div key={f.label} className="flex flex-col items-center gap-3">
-              <span className="text-insight-blue-glow text-2xl">
-                {f.icon === "circle" && (
-                  <svg width="38" height="38" viewBox="0 0 38 38">
-                    <circle cx="19" cy="19" r="16" fill="none" stroke="currentColor" strokeWidth="1.2" />
-                    <circle cx="19" cy="19" r="8" fill="none" stroke="currentColor" strokeWidth="1.2" />
-                  </svg>
-                )}
-                {f.icon === "hex" && (
-                  <svg width="38" height="38" viewBox="0 0 38 38">
-                    <polygon points="19,3 32,10 32,27 19,35 6,27 6,10" fill="none" stroke="currentColor" strokeWidth="1.2" />
-                    <line x1="6" y1="10" x2="32" y2="27" stroke="currentColor" strokeWidth="1" />
-                    <line x1="32" y1="10" x2="6" y2="27" stroke="currentColor" strokeWidth="1" />
-                  </svg>
-                )}
-                {f.icon === "mesh" && (
-                  <svg width="38" height="38" viewBox="0 0 38 38">
-                    <circle cx="19" cy="7" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
-                    <circle cx="8" cy="19" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
-                    <circle cx="30" cy="19" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
-                    <circle cx="19" cy="31" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.2" />
-                    <line x1="13.3" y1="11.4" x2="24.7" y2="26.6" stroke="currentColor" strokeWidth="1" />
-                    <line x1="24.7" y1="11.4" x2="13.3" y2="26.6" stroke="currentColor" strokeWidth="1" />
-                  </svg>
-                )}
-              </span>
-              <span className="text-xs text-foreground/70 text-center leading-relaxed whitespace-pre-line tracking-wide uppercase">
-                {f.label}
-              </span>
-            </div>
-          ))}
+          <HeroWave />
         </motion.div>
+      </div>
+
+      {/* Bottom tagline */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2">
+        <p className="text-[11px] text-[#bbb] font-league tracking-widest uppercase">
+          Phoneme · Shadowing · Real World
+        </p>
       </div>
     </main>
   );

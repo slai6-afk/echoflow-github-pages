@@ -42,16 +42,6 @@ export async function getYoutubeClips() {
   return res.json();
 }
 
-export async function fetchTtsAudio(text: string, voice = "alloy"): Promise<Blob> {
-  const res = await fetch(`${API_BASE}/api/content/tts`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text, voice }),
-  });
-  if (!res.ok) throw new Error("TTS unavailable");
-  return res.blob();
-}
-
 export async function analyzeImportedAudio(audioBlob: Blob, role = "UX Designer", nativeLanguage = "") {
   const form = new FormData();
   form.append("audio", audioBlob, "import.webm");

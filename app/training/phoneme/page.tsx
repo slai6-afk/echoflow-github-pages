@@ -6,7 +6,7 @@ import Link from "next/link";
 import RecordButton from "@/components/ui/RecordButton";
 import WaveformVisualizer from "@/components/ui/WaveformVisualizer";
 import { useAudioRecorder } from "@/lib/useAudioRecorder";
-import { evaluatePronunciation, fetchTtsAudio } from "@/lib/api";
+import { API_BASE, evaluatePronunciation } from "@/lib/api";
 
 // ─── Drill data ───────────────────────────────────────────────────────────────
 
@@ -186,7 +186,12 @@ function scoreLabel(s: number) {
 }
 
 function playTTS(text: string) {
-  fetchTtsAudio(text, "alloy")
+  fetch(`${API_BASE}/api/content/tts`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, voice: "alloy" }),
+  })
+    .then(r => { if (!r.ok) throw new Error(); return r.blob(); })
     .then(blob => {
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);

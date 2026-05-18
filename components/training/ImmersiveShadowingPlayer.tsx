@@ -122,6 +122,7 @@ export default function ImmersiveShadowingPlayer({
   const [errorMsg, setErrorMsg] = useState("");
   const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
   const [attempts, setAttempts] = useState(0);
+  const [activeCueIdx, setActiveCueIdx] = useState(0);
 
   const playerRef = useRef<YTPlayer | null>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
@@ -137,6 +138,19 @@ export default function ImmersiveShadowingPlayer({
   const scoresRef = useRef<number[]>([]);
 
   const seg = segments[segIdx];
+  const activeCue = segments[activeCueIdx] ?? seg;
+
+  const findCueIndex = useCallback(
+    (time: number) => {
+      if (!segments.length) return 0;
+      const idx = segments.findIndex((s) => time >= s.start && time < s.end);
+      if (idx >= 0) return idx;
+      // If we miss narrow cue windows, stick to the closest previous cue.
+      const fallback = segments.findLastIndex((s) => s.start <= time);
+      return fallback >= 0 ? fallback : 0;
+    },
+    [segments]
+  );
 
   useEffect(() => { stateRef.current = machineState; }, [machineState]);
   useEffect(() => { segRef.current = segments[segIdx]; }, [segments, segIdx]);
@@ -209,13 +223,19 @@ export default function ImmersiveShadowingPlayer({
     pollIntervalRef.current = setInterval(() => {
       const player = playerRef.current;
       if (!player) return;
-      if (player.getCurrentTime() >= endTime + 0.15 && stateRef.current === "listening") {
+      const currentTime = player.getCurrentTime();
+      if (stateRef.current === "listening") {
+        const cueIdx = findCueIndex(currentTime);
+        setActiveCueIdx((prev) => (prev === cueIdx ? prev : cueIdx));
+      }
+      if (currentTime >= endTime + 0.15 && stateRef.current === "listening") {
         clearInterval(pollIntervalRef.current!);
         player.pauseVideo();
         transition("auto_trigger");
       }
     }, 80);
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [findCueIndex]);
 
   // ── Replay current video segment (no recording) ───────────────────────────
   const replayVideo = useCallback(() => {
@@ -249,6 +269,7 @@ export default function ImmersiveShadowingPlayer({
         });
         const s = segRef.current;
         if (!s || !playerRef.current) return;
+        setActiveCueIdx(segIdx);
         playerRef.current.seekTo(s.start, true);
         playerRef.current.playVideo();
         startSentencePoller(s.end);
@@ -312,8 +333,8 @@ export default function ImmersiveShadowingPlayer({
     const url = URL.createObjectURL(blob);
     setRecordingUrl(url);
 
-    const activeSeg = segRef.current;
-    const refText = activeSeg?.text ?? "";
+    const cue = segments[activeCueIdx] ?? segRef.current;
+    const refText = cue?.text ?? "";
 
     try {
       const data = await evaluatePronunciation(blob, refText);
@@ -339,10 +360,10 @@ export default function ImmersiveShadowingPlayer({
       setAttempts(a => a + 1);
       setMachineState("feedback");
 
-      if (activeSeg) {
+      if (cue) {
         saveAssessmentResult({
           videoId,
-          sentenceText: activeSeg.text,
+          sentenceText: cue.text,
           overallScore: avgScore,
           words: wordResults,
         }).catch(() => {});
@@ -391,6 +412,7 @@ export default function ImmersiveShadowingPlayer({
 
   useEffect(() => {
     if (machineState === "listening" && playerRef.current && segRef.current) {
+      setActiveCueIdx(segIdx);
       playerRef.current.seekTo(segRef.current.start, true);
       playerRef.current.playVideo();
       startSentencePoller(segRef.current.end);
@@ -414,7 +436,7 @@ export default function ImmersiveShadowingPlayer({
     <div className="flex flex-col gap-5">
 
       {/* ── YouTube player ── */}
-      <div className="relative overflow-hidden border-2 border-foreground bg-black aspect-video">
+      <div className="relative overflow-hidden bg-black/95 aspect-video">
         <div ref={playerContainerRef} className="w-full h-full" />
 
         {/* Recording overlay */}
@@ -442,8 +464,8 @@ export default function ImmersiveShadowingPlayer({
               style={{ background: "linear-gradient(transparent, rgba(0,0,0,0.88))" }}
             >
               <LiaisonText
-                text={seg.text}
-                className="text-white text-sm font-league leading-relaxed block text-center"
+                text={activeCue?.text ?? ""}
+                className="text-white text-sm font-league leading-relaxed block text-center drop-shadow-lg"
                 markerClassName="font-bold"
                 // white liaison markers on dark background
               />
@@ -478,13 +500,13 @@ export default function ImmersiveShadowingPlayer({
 
       {/* ── Reference sentence with liaison markers ── */}
       {seg && (
-        <div className="border-l-4 border-bauhaus-blue pl-4">
+        <div className="pl-0">
           <p className="text-xs text-muted font-league uppercase tracking-widest mb-1">
-            Sentence {segIdx + 1} / {segments.length}
+            Sentence {activeCueIdx + 1} / {segments.length}
             {machineState === "feedback" ? " · read aloud when retrying" : " · read along with the video"}
           </p>
           <LiaisonText
-            text={seg.text}
+            text={activeCue?.text ?? ""}
             className="font-league text-foreground text-base leading-relaxed"
             markerClassName="text-bauhaus-blue font-bold"
           />
@@ -638,7 +660,7 @@ export default function ImmersiveShadowingPlayer({
               (() => {
                 const weakWords = result.words.filter(w => w.accuracy_score < 78);
                 return weakWords.length > 0 ? (
-                  <div className="rounded-xl border border-border bg-surface px-4 py-3">
+                  <div className="px-0 py-1">
                     <p className="text-[10px] font-league text-muted uppercase tracking-widest mb-2">
                       Watch these words
                     </p>
@@ -662,7 +684,7 @@ export default function ImmersiveShadowingPlayer({
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-xl border border-border bg-surface px-4 py-3">
+                  <div className="px-0 py-1">
                     <p className="text-sm font-league text-muted">
                       Perfect — all words scored well. Move on.
                     </p>

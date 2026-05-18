@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import ImmersiveShadowingPlayer, { Segment } from "@/components/training/ImmersiveShadowingPlayer";
 import { getYoutubeClips } from "@/lib/api";
+import LineIcon from "@/components/ui/LineIcons";
 
 interface VideoClip {
   id: string;
@@ -116,7 +117,7 @@ export default function ShadowingPage() {
 
   return (
     <main className="min-h-screen bg-background flex flex-col">
-      <header className="flex items-center justify-between px-8 py-5 border-b-2 border-foreground">
+      <header className="flex items-center justify-between px-8 py-5">
         <Link href="/dashboard" className="font-anta text-xl text-foreground">
           EchoFlow
         </Link>
@@ -150,18 +151,14 @@ export default function ShadowingPage() {
               </div>
 
               {/* How it works */}
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-3 section-rule py-4">
                 {[
-                  { shape: "circle", color: "#1D3557", label: "Listen" },
-                  { shape: "rect",   color: "#E63946", label: "Shadow" },
-                  { shape: "tri",    color: "#F4A261", label: "Score" },
+                  { icon: "shadowing" as const, label: "Listen" },
+                  { icon: "phoneme" as const, label: "Shadow" },
+                  { icon: "interference" as const, label: "Score" },
                 ].map((s) => (
-                  <div key={s.label} className="border border-border p-4 flex flex-col items-center gap-2">
-                    <svg width="24" height="24" viewBox="0 0 24 24">
-                      {s.shape === "circle" && <circle cx="12" cy="12" r="12" fill={s.color} />}
-                      {s.shape === "rect"   && <rect width="24" height="24" fill={s.color} />}
-                      {s.shape === "tri"    && <polygon points="12,0 24,24 0,24" fill={s.color} />}
-                    </svg>
+                  <div key={s.label} className="p-4 flex flex-col items-center gap-2">
+                    <LineIcon name={s.icon} size={30} />
                     <span className="text-xs font-league uppercase tracking-widest text-muted">
                       {s.label}
                     </span>
@@ -192,10 +189,10 @@ export default function ShadowingPage() {
                         key={clip.id}
                         onClick={() => handleSelect(clip)}
                         disabled={locked}
-                        className={`text-left border-2 p-5 transition-all group ${
+                        className={`text-left p-5 transition-all group section-rule ${
                           locked
-                            ? "border-border opacity-50 cursor-not-allowed"
-                            : "border-border hover:border-foreground"
+                            ? "opacity-50 cursor-not-allowed"
+                            : "hover:bg-black/3"
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -215,7 +212,7 @@ export default function ShadowingPage() {
                                 <span className="text-xs text-muted font-league">
                                   Unlocks in {tomorrowLabel()}
                                 </span>
-                                <div className="w-5 h-5 border border-border flex items-center justify-center">
+                                <div className="w-5 h-5 flex items-center justify-center">
                                   <svg width="8" height="10" viewBox="0 0 8 10" fill="currentColor" className="text-muted">
                                     <rect x="1" y="4" width="6" height="6" rx="0.5" />
                                     <path d="M2 4V3a2 2 0 0 1 4 0v1" stroke="currentColor" strokeWidth="1.2" fill="none" />
@@ -227,9 +224,9 @@ export default function ShadowingPage() {
                                 <span className="text-xs text-muted font-league">
                                   {clip.segments.length} sentences
                                 </span>
-                                <div className="w-5 h-5 bg-foreground flex items-center justify-center">
+                                <div className="w-5 h-5 flex items-center justify-center text-foreground">
                                   <svg width="8" height="10" viewBox="0 0 8 10">
-                                    <polygon points="0,0 8,5 0,10" fill="white" />
+                                    <polygon points="0,0 8,5 0,10" fill="currentColor" />
                                   </svg>
                                 </div>
                               </>
@@ -265,7 +262,7 @@ export default function ShadowingPage() {
                 </div>
                 <button
                   onClick={handleBackToPicker}
-                  className="text-xs text-muted font-league hover:text-foreground transition-colors border border-border px-3 py-1.5"
+                  className="text-xs text-muted font-league hover:text-foreground transition-colors px-3 py-1.5"
                 >
                   ← Change video
                 </button>

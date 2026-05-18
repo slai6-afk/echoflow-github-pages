@@ -26,32 +26,23 @@ export default function WaveformBackground() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       tick += 0.006;
 
-      const barCount = 72;
-      const barWidth = canvas.width / barCount;
-      const centerY = canvas.height * 0.54;
-
-      for (let i = 0; i < barCount; i++) {
-        const phase = (i / barCount) * Math.PI * 4 + tick;
-        const height =
-          Math.sin(phase) * 42 +
-          Math.sin(phase * 2.1) * 18 +
-          Math.sin(phase * 0.68) * 22;
-        const alpha = 0.06 + Math.abs(Math.sin(phase * 0.5)) * 0.06;
-
-        const mix = (Math.sin(phase * 0.6) + 1) / 2;
-        const r = Math.round(230 - mix * 60);
-        const g = Math.round(120 - mix * 40);
-        const b = Math.round(185 + mix * 45);
-        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      const lines = 5;
+      for (let row = 0; row < lines; row++) {
+        const yBase = canvas.height * (0.22 + row * 0.14);
+        const amp = 16 + row * 4;
         ctx.beginPath();
-        ctx.roundRect(
-          i * barWidth + barWidth * 0.15,
-          centerY - Math.abs(height),
-          barWidth * 0.7,
-          Math.abs(height) * 2,
-          3
-        );
-        ctx.fill();
+        for (let x = 0; x <= canvas.width; x += 8) {
+          const phase = x * 0.008 + tick * (1 + row * 0.2);
+          const y = yBase + Math.sin(phase) * amp + Math.cos(phase * 0.62) * (amp * 0.35);
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle =
+          row % 2 === 0
+            ? `rgba(5, 5, 5, ${0.06 - row * 0.007})`
+            : `rgba(27, 63, 150, ${0.08 - row * 0.01})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
       }
 
       animFrame = requestAnimationFrame(draw);

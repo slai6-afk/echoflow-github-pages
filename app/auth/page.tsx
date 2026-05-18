@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-browser";
+import LineIcon from "@/components/ui/LineIcons";
 
 type AuthState = "idle" | "sending" | "sent" | "error";
 
@@ -79,11 +80,9 @@ export default function AuthPage() {
             exit={{ opacity: 0, scale: 0.8 }}
             className="flex flex-col items-center gap-4"
           >
-            <motion.div
-              className="w-12 h-12 rounded-full bg-bauhaus-red"
-              animate={{ scale: [1, 1.15, 1] }}
-              transition={{ duration: 0.9, repeat: Infinity, ease: "easeInOut" }}
-            />
+            <motion.div animate={{ y: [0, -3, 0] }} transition={{ duration: 0.9, repeat: Infinity }}>
+              <LineIcon name="shadowing" size={42} />
+            </motion.div>
             <p className="text-sm font-league text-muted">Sending link…</p>
           </motion.div>
         )}
@@ -97,11 +96,7 @@ export default function AuthPage() {
             exit={{ opacity: 0 }}
             className="flex flex-col items-center gap-4 text-center max-w-sm"
           >
-            <div className="w-12 h-12 bg-bauhaus-blue flex items-center justify-center">
-              <svg width="20" height="16" viewBox="0 0 20 16" fill="none">
-                <path d="M2 8L8 14L18 2" stroke="white" strokeWidth="2.5" strokeLinecap="square" />
-              </svg>
-            </div>
+            <LineIcon name="phoneme" size={44} />
             <div>
               <p className="font-league font-bold text-foreground">Check your inbox</p>
               <p className="text-sm text-muted font-league mt-1">
@@ -126,6 +121,12 @@ export default function AuthPage() {
             exit={{ opacity: 0 }}
             className="w-full max-w-sm flex flex-col gap-4"
           >
+            <div className="section-rule py-3 flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-[0.16em] text-muted">
+                Passwordless Sign In
+              </span>
+              <LineIcon name="interference" size={22} />
+            </div>
             <div className="flex flex-col gap-1">
               <label className="text-xs font-league text-muted uppercase tracking-widest">
                 Email
@@ -136,8 +137,7 @@ export default function AuthPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendMagicLink()}
                 placeholder="you@company.com"
-                className="w-full px-4 py-3 font-league text-sm text-foreground bg-white border border-foreground outline-none focus:border-bauhaus-blue transition-colors placeholder:text-muted"
-                style={{ borderRadius: 0 }}
+                className="w-full px-0 py-3 font-league text-sm text-foreground bg-transparent border-b border-foreground/60 outline-none focus:border-bauhaus-blue transition-colors placeholder:text-muted"
                 autoFocus
               />
             </div>
@@ -165,7 +165,7 @@ export default function AuthPage() {
             {/* Google OAuth */}
             <button
               onClick={signInWithGoogle}
-              className="w-full py-3 border-2 border-foreground text-foreground font-league font-bold text-sm uppercase tracking-widest hover:bg-foreground hover:text-background transition-colors flex items-center justify-center gap-3"
+              className="w-full py-3 border border-foreground text-foreground font-league font-bold text-sm uppercase tracking-widest hover:bg-foreground hover:text-background transition-colors flex items-center justify-center gap-3"
             >
               <svg width="16" height="16" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

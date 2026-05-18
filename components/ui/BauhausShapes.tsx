@@ -12,7 +12,7 @@ export function RedCircle({ size = 10, onClick }: { size?: number; onClick?: () 
       aria-label="Play reference audio for this phoneme"
     >
       <svg width={size} height={size} viewBox="0 0 10 10">
-        <circle cx="5" cy="5" r="4.2" fill="none" stroke="#ef4f91" strokeWidth="1.2" />
+        <circle cx="5" cy="5" r="5" fill="#E63946" />
       </svg>
     </button>
   );
@@ -21,7 +21,7 @@ export function RedCircle({ size = 10, onClick }: { size?: number; onClick?: () 
 export function YellowTriangle({ size = 10 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 10 10" aria-label="Slight mispronunciation">
-      <polygon points="5,1 9,9 1,9" fill="none" stroke="#ffd86b" strokeWidth="1.2" />
+      <polygon points="5,0 10,10 0,10" fill="#F4A261" />
     </svg>
   );
 }
@@ -29,7 +29,7 @@ export function YellowTriangle({ size = 10 }: { size?: number }) {
 export function BlueRect({ width = 8, height = 4 }: { width?: number; height?: number }) {
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} aria-label="Good pronunciation">
-      <rect x="0.6" y="0.6" width={width - 1.2} height={height - 1.2} fill="none" stroke="#193d7a" strokeWidth="1.2" />
+      <rect width={width} height={height} fill="#1D3557" />
     </svg>
   );
 }
@@ -42,8 +42,8 @@ export function PlayIcon({ size = 16, onClick }: { size?: number; onClick?: () =
       aria-label="Play native pronunciation"
     >
       <svg width={size} height={size} viewBox="0 0 16 16">
-        <circle cx="8" cy="8" r="7" fill="none" stroke="#193d7a" strokeWidth="1.2" />
-        <polygon points="6,5 11,8 6,11" fill="#193d7a" />
+        <rect width="16" height="16" fill="#1D3557" />
+        <polygon points="5,3 13,8 5,13" fill="white" />
       </svg>
     </button>
   );
